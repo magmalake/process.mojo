@@ -1,0 +1,6 @@
+name = "process-mojo"
+version = "0.1.0"
+description = "Run programs from Mojo: spawn, capture output, time out, set limits, and sandbox them (Seatbelt on macOS, Landlock + seccomp on Linux)"
+tags = ["magmalake", "process", "subprocess", "sandbox", "seatbelt", "landlock", "seccomp"]
+# other tins this one depends on; omit if none
+tins = []
