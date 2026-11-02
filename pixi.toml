@@ -9,11 +9,11 @@ platforms = ["osx-arm64", "linux-64", "linux-aarch64"]
 
 [tasks]
 test = { cmd = "mkdir -p build && mojo build -I src tests/test_process.mojo -o build/process-test && ./build/process-test" }
-test-sandbox = { cmd = "mkdir -p build && mojo build -I src tests/test_sandbox.mojo -o build/sandbox-test && ./build/sandbox-test" }
 lint = { cmd = "mojolint --lsp -I src src tests" }
-fmt = { cmd = "mojo format src tests" }
-format-check = { cmd = "mojo format src tests && git diff --exit-code -- src tests" }
-check = { depends-on = ["test", "test-sandbox", "lint"] }
+# Linux in Docker from a Mac: tests/linux.sh [env] [task], e.g. tests/linux.sh default test
+fmt = { cmd = "mojo format src tests examples" }
+format-check = { cmd = "mojo format src tests examples && git diff --exit-code -- src tests examples" }
+check = { depends-on = ["test", "lint"] }
 
 # ── pixi-build: consumable as a pixi source dependency ──────────────────────
 # Conda package name is process-mojo; the Mojo import stays `from process import …`.
@@ -43,9 +43,23 @@ modular = ">=26.8.0.dev2026102305,<28"
 [feature.stable.dependencies]
 mojo-compiler = "==1.2.0"
 
+# examples/dista_build.mojo: process inside a dista task. As in orca, dista
+# compiles from a checkout next to this one (it isn't a consumable package
+# yet), and its own dependencies are packages pinned at the revisions dista
+# pins. Stable only: those packages are built with mojo-compiler 1.2.0, and a
+# precompiled Mojo package is refused by any other compiler.
+[feature.examples.dependencies]
+memory-region-mojo = { git = "https://github.com/magmalake/memory-region.mojo", rev = "91ff4418b44a89f9354e7d32633e9b11ad365dfd" }
+arrow-mlake-mojo = { git = "https://github.com/magmalake/arrow-mlake.mojo", rev = "d157bb3296b4f6d36feae2848ebf6e0c7e4f9f5e" }
+objectstore-mojo = { git = "https://github.com/magmalake/objectstore.mojo", rev = "748e2d31450a7793592e439d6c69d8c6598d2129" }
+
+[feature.examples.tasks]
+example-dista = { cmd = "mkdir -p build && mojo build -I src -I ../dista.mojo/src -I $CONDA_PREFIX/lib/mojo examples/dista_build.mojo -o build/dista-build && ./build/dista-build" }
+
 [environments]
 default = ["nightly"]
 stable = ["stable"]
+examples = ["stable", "examples"]
 
 [dependencies]
 lint-mojo = { git = "https://github.com/magmalake/lint.mojo.git", rev = "4a635f9a0ca0b7b639cd3823534cf0b36ff63985" }

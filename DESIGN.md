@@ -77,18 +77,28 @@ Every child starts through one path on both platforms: `fork`, then a short list
 
 1. `setpgid(0, 0)`, so the child leads a new process group and a timeout can kill its whole tree.
 2. `dup2` the prepared stdin, stdout and stderr onto 0, 1 and 2.
-3. Close every other descriptor. On Linux that's `close_range(3, ~0)`; on macOS it's a loop up to the descriptor limit read before `fork`. A child never inherits a dista socket or a store mapping.
-4. `chdir` and `setrlimit`.
+3. `chdir` and `setrlimit`.
+4. *Linux:* unblock every signal and reset every disposition to default (`SIG_IGN` survives exec), then close every descriptor from 3 up with `close_range`, except the error pipe.
 5. *Linux, sandboxed:* `prctl(PR_SET_NO_NEW_PRIVS)`, `landlock_restrict_self(ruleset)`, then the seccomp filter.
-6. `execve`. *macOS, sandboxed:* the program run is `/usr/bin/sandbox-exec -p <profile> -- <program> <args>`.
+6. *Linux:* `execve`. *macOS:* `posix_spawn` with `POSIX_SPAWN_SETEXEC`, which execs in place. Its attributes reset the signal mask and dispositions, and `POSIX_SPAWN_CLOEXEC_DEFAULT` closes every descriptor except 0, 1 and 2, which are named in its file actions. macOS has no `close_range`, and this does the same job atomically. *macOS, sandboxed:* the program it execs is `/usr/bin/sandbox-exec -p <profile> -- <program> <args>`.
+
+A child never inherits a dista socket or a store mapping.
+
+*Measured* on macOS 26: posix_spawn's own `dup2` file action fails with `EBADF` under `SETEXEC` when the source descriptor is close-on-exec, because the kernel closes those before it runs the actions. A ten-line C program shows the same thing. Every descriptor process makes is close-on-exec, so the child does its own `dup2` in step 2 on both platforms, and the file actions only mark 0, 1 and 2 as inherited.
+
+`posix_spawn` isn't on POSIX's list of async-signal-safe functions. On macOS with `SETEXEC` it reads attributes prepared before `fork` and makes the `posix_spawn` system call, and it's the one place process relies on that implementation detail. The multithreaded-parent test in phase 4 is what checks it.
 
 **Errors come back on a pipe.** Before `fork` the parent opens a close-on-exec pipe. If any step fails, the child writes the step number and errno to it and `_exit(127)`s. When `execve` succeeds the pipe closes, so the parent reads either end-of-file, meaning the program is running, or eight bytes saying what failed and why. "exec failed" is never confused with "the program exited 127". Rust's standard library uses the same trick.
 
 **The program path is resolved in the parent.** It's looked up in the child's `PATH` (the one given to the command, not the parent's), before `fork`, because `execvp` may allocate. A name with a `/` is used as given.
 
-### Why not `posix_spawn`
+### Why not `posix_spawn` alone
 
-`posix_spawn` is faster on macOS and is the safe default where it fits. It can't do step 5, and it can't set rlimits, so the sandboxed path would need `fork` anyway. One code path that's tested everywhere beats two paths where one runs only when sandboxed. If profiling shows spawn cost matters for the `none` mode, `posix_spawn` can take over that mode later without changing the API.
+Plain `posix_spawn` with no `fork` is faster on macOS, and it's the safe default where it fits. It can't set rlimits, it can't apply Landlock or seccomp, and on macOS its `dup2` can't take close-on-exec sources (above). So every path would need a `fork` anyway. One code path that's tested everywhere beats two paths where one runs only when sandboxed. *Measured:* 200 sequential `echo`s take about 260 ms on macOS, 1.3 ms each, which is negligible next to a build. If profiling ever shows spawn cost matters for the `none` mode, a fork-free path can take it over without changing the API.
+
+### Sharing libc with other libraries
+
+*Measured* when the dista example first linked process and dista into one binary: within a program, every `external_call` to a C symbol must use the same signature, including the stdlib's and other libraries'. Otherwise the build fails with "existing function with conflicting signature". dista declares `poll` and `waitpid` with pointer arguments, the stdlib declares `clock_gettime`, and memory-region declares `open` as variadic after two fixed arguments. So process passes every address as a pointer (`CPtr`), never as an `Int`, and declares `open` exactly as memory-region does. `num_fixed_args` is also what makes variadic calls correct on Apple arm64, which reads variadic arguments from the stack. magmalake would benefit from one shared libc declaration module. Until one exists, the rule is: pointers as pointers, and the arity the C prototype has.
 
 ## Waiting, capturing, timing out
 
@@ -164,7 +174,7 @@ There aren't any in v0, deliberately. `RLIMIT_AS` would be the obvious limit, an
 
 ## Testing
 
-- **Unit tests** (`pixi run test`), both toolchains × both platforms in CI: exit codes, signals, timeouts that kill a grandchild, capture of large and interleaved stdout and stderr, the capture cap, `Stdio.file`, environment clearing, `PATH` lookup, every setup error reported with the right step and errno, descriptors not leaking into the child, and spawning from a process with several threads running.
+- **Unit tests** (`pixi run test`), both toolchains × both platforms in CI: exit codes, signals, timeouts that kill a grandchild, capture of large and interleaved stdout and stderr, the capture cap, `Stdio.file`, environment clearing, `PATH` lookup, every setup error reported with the right step and errno, descriptors not leaking into the child, and ignored signals reset in the child. Spawning from a parent with several threads running is added in phase 4 with dista, which is where that parent comes from.
 - **Sandbox tests** (`pixi run test-sandbox`): one set of escape attempts that must all fail on both platforms. Reading a file under `$HOME`, writing outside the write paths, following a symlink out of a write path, `connect` to an IP, a DNS lookup, connecting to a Unix socket the parent listens on, signalling the parent (Linux ABI ≥ 6, macOS), reading a `/dev/shm` file (Linux) or a `$TMPDIR` file (macOS). Plus the things that must work: `mojo build` and run of a small program, `pixi run` offline against a read-only cache.
 - **Linux on a Mac** runs in Docker (`tests/linux.sh`), so the Landlock and seccomp path is exercised before a push. CI runs it natively on `ubuntu-latest` (x86_64) and on `ubuntu-24.04-arm` (aarch64), so both seccomp syscall tables are tested.
 
@@ -177,7 +187,7 @@ Each phase ends at a gate: something that works, not a feature list.
 | 1 | **Spawn.** `Command`, `Child`, `Output`, `Stdio`, `Limits`; fork/exec with the error pipe; `PATH` lookup; capture with `poll`; timeouts that kill the group. | The unit tests pass on osx-arm64 and linux-64, stable and nightly. A `sh -c 'sleep 100 & sleep 100'` with a 1 s timeout leaves no process behind. |
 | 2 | **Seatbelt.** `Sandbox` on macOS, the generated profile, `allow_toolchain()`, canonical paths. | Every escape test fails and `mojo build` plus run of a program works, inside the sandbox, on macOS. |
 | 3 | **Landlock and seccomp.** The ruleset, the BPF filter for both architectures, ABI detection and scopes, `harden_current_process()`. | The same tests on Linux, natively in CI and in Docker locally. A kernel without Landlock raises instead of running. |
-| 4 | **In use.** shelfwatch's `build_tin` dista task over it; a cgroup memory limit on Linux; dista's and flare's private fork helpers replaced where it's a clean swap. | shelfwatch builds the magmalake tins nightly, each in its sandbox. |
+| 4 | **In use.** shelfwatch's `build_tin` dista task over it (`examples/dista_build.mojo` is the sketch: one task per checkout, the log on the worker, a small result back); a cgroup memory limit on Linux; dista's and flare's private fork helpers replaced where it's a clean swap. | shelfwatch builds the magmalake tins nightly, each in its sandbox. |
 
 ## Open questions
 
