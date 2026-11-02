@@ -7,4 +7,4 @@ directory, capture stdout and stderr, time them out, limit their resources,
 and optionally sandbox them — Seatbelt on macOS, Landlock and seccomp on
 Linux. No C shim, no external binaries beyond what the OS ships.
 
-Early days: see [DESIGN.md](DESIGN.md).
+Early days: [DESIGN.md](DESIGN.md) is the plan.
