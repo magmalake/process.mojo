@@ -19,7 +19,7 @@ from std.ffi import (
     external_call,
     get_errno,
 )
-from std.memory import Pointer, stack_allocation
+from std.memory import Pointer
 from std.sys.info import CompilationTarget, platform_map
 
 comptime _pm = platform_map[T=Int, ...]

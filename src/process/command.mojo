@@ -8,7 +8,7 @@ place and closes every descriptor not named in its file actions, since macOS
 has no `close_range`.
 """
 
-from std.ffi import c_int, c_short, c_size_t, c_ssize_t, c_uint, external_call
+from std.ffi import c_int, c_size_t, c_ssize_t, c_uint, external_call
 from std.memory import stack_allocation
 
 from ._libc import (
