@@ -1,6 +1,6 @@
 # process: design
 
-November 2, 2026 · targets stable Mojo 1.2.0 and current nightly, on osx-arm64, linux-64 and linux-aarch64
+November 2, 2026 · targets the Mojo 1.3 nightly 1.3.0.dev2026111805, on osx-arm64, linux-64 and linux-aarch64
 
 process runs programs from Mojo. It starts a child with arguments, an environment and a working directory, captures what it writes, stops it when it runs too long, limits what it can use and, when asked, sandboxes it: no network, no writes outside the directories you name, no reads outside the system and the directories you name.
 
@@ -184,7 +184,7 @@ Each phase ends at a gate: something that works, not a feature list.
 
 | Phase | What | Gate |
 |---|---|---|
-| 1 | **Spawn.** `Command`, `Child`, `Output`, `Stdio`, `Limits`; fork/exec with the error pipe; `PATH` lookup; capture with `poll`; timeouts that kill the group. | The unit tests pass on osx-arm64 and linux-64, stable and nightly. A `sh -c 'sleep 100 & sleep 100'` with a 1 s timeout leaves no process behind. |
+| 1 | **Spawn.** `Command`, `Child`, `Output`, `Stdio`, `Limits`; fork/exec with the error pipe; `PATH` lookup; capture with `poll`; timeouts that kill the group. | The unit tests pass on osx-arm64 and linux-64. A `sh -c 'sleep 100 & sleep 100'` with a 1 s timeout leaves no process behind. |
 | 2 | **Seatbelt.** `Sandbox` on macOS, the generated profile, `allow_toolchain()`, canonical paths. | Every escape test fails and `mojo build` plus run of a program works, inside the sandbox, on macOS. |
 | 3 | **Landlock and seccomp.** The ruleset, the BPF filter for both architectures, ABI detection and scopes, `harden_current_process()`. | The same tests on Linux, natively in CI and in Docker locally. A kernel without Landlock raises instead of running. |
 | 4 | **In use.** shelfwatch's `build_tin` dista task over it (`examples/dista_build.mojo` is the sketch: one task per checkout, the log on the worker, a small result back); a cgroup memory limit on Linux; dista's and flare's private fork helpers replaced where it's a clean swap. | shelfwatch builds the magmalake tins nightly, each in its sandbox. |

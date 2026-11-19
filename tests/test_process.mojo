@@ -37,7 +37,7 @@ def _raises_with(var cmd: Command, needle: String) raises:
         _ = cmd.run()
     except e:
         var msg = String(e)
-        if msg.find(needle) < 0:
+        if needle not in msg:
             raise Error(
                 "expected an error containing '", needle, "', got: ", msg
             )

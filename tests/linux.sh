@@ -4,11 +4,10 @@
 # and copied in, so the host's macOS .pixi environments stay untouched; pixi's
 # package cache lives in a named volume so reruns are fast.
 #
-#   tests/linux.sh                 # pixi run -e stable test
-#   tests/linux.sh default test    # nightly
-#   tests/linux.sh stable test-sandbox
+#   tests/linux.sh                 # pixi run -e default test
+#   tests/linux.sh default lint
 set -eu
-env_name="${1:-stable}"
+env_name="${1:-default}"
 task="${2:-test}"
 root="$(cd "$(dirname "$0")/.." && pwd -P)"
 exec docker run --rm \
