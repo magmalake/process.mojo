@@ -107,7 +107,9 @@ def main() raises:
     var refs = List[ObjectRef[RepoResult]]()
     for i in range(1, len(args)):
         refs.append(
-            rt.remote[RunRepo](RepoJob(String(args[i]), "stable", "test", 1800))
+            rt.remote[RunRepo](
+                RepoJob(String(args[i]), "default", "test", 1800)
+            )
         )
 
     var failed = 0

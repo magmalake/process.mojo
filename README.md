@@ -13,7 +13,7 @@ It exists because `std.subprocess.run` is `popen` through a shell and returns
 stdout only, with no exit status, stderr, environment, working directory or
 timeout.
 
-Works on **Mojo 1.2.0 (stable) and current nightly**, on **osx-arm64**,
+Works on the **Mojo 1.3 nightly 1.3.0.dev2026111805**, on **osx-arm64**,
 **linux-64** and **linux-aarch64**.
 
 ```mojo
@@ -63,9 +63,9 @@ process-mojo = { git = "https://github.com/magmalake/process.mojo" }
 ## Develop
 
 ```sh
-pixi run test                 # nightly; -e stable for Mojo 1.2.0
+pixi run test
 pixi run lint
-tests/linux.sh stable test    # the same suite on Linux, in Docker
+tests/linux.sh default test   # the same suite on Linux, in Docker
 ```
 
 [DESIGN.md](DESIGN.md) is the plan: how a child starts, the sandbox on each

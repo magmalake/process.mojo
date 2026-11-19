@@ -712,7 +712,7 @@ struct Child(Movable):
 
 
 def _env_key(entry: String) -> String:
-    var at = entry.find("=")
+    var at = entry.find("=").or_else(-1)
     if at < 0:
         return entry
     return String(entry[byte=0:at])
@@ -840,7 +840,7 @@ struct Command(Movable):
         return out^
 
     def _resolve(self, env: List[String]) raises -> String:
-        if self._program.find("/") >= 0:
+        if "/" in self._program:
             return self._program
         var path = String("/usr/bin:/bin")
         for e in env:
