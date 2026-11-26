@@ -29,13 +29,13 @@ path = "src/process"
 name = "process"
 
 [package.host-dependencies]
-mojo-compiler = "==1.3.0.dev2026112505"
+mojo-compiler = "==1.3.0.dev2026112605"
 
 [package.build-dependencies]
-mojo-compiler = "==1.3.0.dev2026112505"
+mojo-compiler = "==1.3.0.dev2026112605"
 
 [package.run-dependencies]
-mojo-compiler = "==1.3.0.dev2026112505"
+mojo-compiler = "==1.3.0.dev2026112605"
 
 # examples/dista_build.mojo: process inside a dista task. As in orca, dista
 # compiles from a checkout next to this one (it isn't a consumable package
@@ -43,9 +43,9 @@ mojo-compiler = "==1.3.0.dev2026112505"
 # the same compiler as this workspace: a precompiled Mojo package is refused
 # by any other compiler.
 [feature.examples.dependencies]
-memory-region-mojo = { git = "https://github.com/magmalake/memory-region.mojo", rev = "fa50e3dcb31c01d061463c8bafa48a02bdd9980a" }
-arrow-mlake-mojo = { git = "https://github.com/magmalake/arrow-mlake.mojo", rev = "be75dc08cd3e3ab38cca5b1f2e7f6b7fcd5a4377" }
-objectstore-mojo = { git = "https://github.com/magmalake/objectstore.mojo", rev = "8811abff03db45f2bc4616bad833c71392e4ef04" }
+memory-region-mojo = { git = "https://github.com/magmalake/memory-region.mojo", rev = "f1cf3cb32c33ad52a65e8efdb891a17e8f99731b" }
+arrow-mlake-mojo = { git = "https://github.com/magmalake/arrow-mlake.mojo", rev = "fe045a5db79acb15e20269f230397953a47c47dc" }
+objectstore-mojo = { git = "https://github.com/magmalake/objectstore.mojo", rev = "e4b8d49c69e0e50aafe7f737c46df9026c3e52c9" }
 
 [feature.examples.tasks]
 example-dista = { cmd = "mkdir -p build && mojo build -I src -I ../dista.mojo/src -I $CONDA_PREFIX/lib/mojo examples/dista_build.mojo -o build/dista-build && ./build/dista-build" }
@@ -59,5 +59,5 @@ examples = ["examples"]
 # it moves across all magmalake tins together. `mojo` rather than
 # `mojo-compiler` here: `mojo format` (fmt, format-check) ships in it.
 [dependencies]
-mojo = "==1.3.0.dev2026112505"
-lint-mojo = { git = "https://github.com/magmalake/lint.mojo.git", rev = "b73d03bbfa458417cf9eed56f4e3b7a092d73969" }
+mojo = "==1.3.0.dev2026112605"
+lint-mojo = { git = "https://github.com/magmalake/lint.mojo.git", rev = "076a7a349917151ff8016079a036654865b3ccc1" }
